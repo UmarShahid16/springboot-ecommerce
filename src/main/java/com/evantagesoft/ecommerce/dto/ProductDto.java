@@ -8,6 +8,6 @@ public class ProductDto {
     private String name;
     private String description;
     private Long price;
-    private String category;
+    private Long categoryId; // This will be used to link to the Category
     private int stockQuantity;
 }

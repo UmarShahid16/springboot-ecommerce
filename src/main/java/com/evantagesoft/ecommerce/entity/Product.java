@@ -13,6 +13,9 @@ public class Product {
     private String name;
     private String description;
     private Long price;
-    private String category;
     private int stockQuantity;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 }
