@@ -3,15 +3,20 @@ package com.evantagesoft.ecommerce.service.user;
 import com.evantagesoft.ecommerce.dto.UserDto;
 import com.evantagesoft.ecommerce.entity.User;
 import com.evantagesoft.ecommerce.repository.UserRepository;
+import com.evantagesoft.ecommerce.response.EcommResponse;
 import com.evantagesoft.ecommerce.response.Response;
+import lombok.extern.log4j.Log4j;
 import org.modelmapper.ModelMapper;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.logging.Logger;
 
 @Service
 public class UserServiceImpl implements UserService{
@@ -29,154 +34,213 @@ public class UserServiceImpl implements UserService{
     @Override
     public Response registerUser(UserDto userDto)  {
 
+        Response response = new Response();
+
+       try {
+           // Check if the user already exists
+           User existingUser = userRepository.findByEmail(userDto.getEmail());
+           if (existingUser != null){
+               response.setCode("404");
+               response.setMessage("user already exist with this email");
+               return response;
+           }
+
+
+           if (userDto.getUsername() == null || userDto.getUsername().isEmpty()){
+               response.setCode("400");
+               response.setMessage("Username Cannot be null or Empty");
+               return response;
+           }
+           if (userDto.getEmail() == null || userDto.getEmail().isEmpty()){
+               response.setCode("400");
+               response.setMessage("Email cannot be null or Empty");
+               return response;
+           }
+
+           User save = userRepository.save(toEntity(userDto));
+           response.setResponse(EcommResponse.SUCCESS);
+           response.setData("data", save);
+           return response;
+       }
+       catch (Exception e){
+           e.printStackTrace();
+       }
+       return response;
+    }
+
+    @Override
+    public Response loginUser(UserDto userDto) {
+
+        Response response = new Response();
+        try {
+            if (userDto == null){
+                response.setResponse(EcommResponse.INVALID_REQUEST_PARAMETER);
+                return response;
+            }
+
+            User user = userRepository.findByEmailAndPassword(userDto.getEmail(), userDto.getPassword());
+            if (user == null){
+                response.setResponse(EcommResponse.DATA_NOT_FOUND);
+                return response;
+            }
+
+            else {
+                response.setResponse(EcommResponse.INVALID_CREDENTIALS);
+                return response;
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+
+    @Override
+    public Response verifyEmail(UserDto userDto) {
+
+        Response response = new Response();
+        try {
+            if (userDto == null){
+                response.setResponse(EcommResponse.INVALID_REQUEST_PARAMETER);
+                return response;
+            }
+
+            User optionalUser = userRepository.findByEmail(userDto.getEmail());
+            if (optionalUser == null){
+                response.setResponse(EcommResponse.USER_NOT_FOUND);
+                return response;
+            }
+
+            else {
+                response.setCode("200");
+                response.setMessage("Email is verified");
+            }
+
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    @Override
+    public Response sendOtp(UserDto userDto) {
+
+        Response response = new Response();
         User user = null;
+        try {
+            if (userDto == null){
+                response.setResponse(EcommResponse.INVALID_REQUEST_PARAMETER);
+                return response;
+            }
 
-        // Check if the user already exists
-        Optional<User> existingUser = userRepository.findByEmail(userDto.getEmail());
-        if (existingUser.isPresent()){
-            return new Response("402","User With email " + userDto.getEmail() + " already exist.");
+             user  = userRepository.findByEmail(userDto.getEmail());
+            if (user == null){
+                response.setResponse(EcommResponse.USER_NOT_FOUND);
+                return response;
+            }
+
+            Random random = new Random();
+            int otp = 100000 + random.nextInt(900000);
+
+            String subject = "Your OTP for email verification";
+            String text = "Your OTP is: " +  otp;
+
+            sendEmail(subject,text,userDto.getEmail());
+
+
+            user.setOtp(otp);
+            user = userRepository.save(user);
+
+            response.setResponse(EcommResponse.SUCCESS);
+            response.setData("data", user);
+            return response;
+
         }
-
-            if (userDto.getUsername() == null || userDto.getUsername().isEmpty()){
-                return new Response("400","Username Cannot be null or Empty");
-            }
-            if (userDto.getEmail() == null || userDto.getEmail().isEmpty()){
-                return new Response("401","Email cannot be null or Empty");
-            }
-
-
-            user = userRepository.save(toEntity(userDto));
-
-            return new Response("200","User Registered Successfully");
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return response;
     }
 
     @Override
-    public Response loginUser(UserDto userDto) throws Exception {
+    public Response verifyOtp(UserDto userDto) {
 
-//        User user = null;
-
-            if (userDto.getEmail() == null || userDto.getEmail().isEmpty()){
-                throw new Exception("Email cannot be null or Empty ");
+        Response response = new Response();
+        try {
+            if (userDto == null){
+                response.setResponse(EcommResponse.INVALID_REQUEST_PARAMETER);
+                return response;
             }
-            if (userDto.getPassword() == null || userDto.getPassword().isEmpty()){
-                throw new Exception("Password cannot be null or Empty");
-            }
+            User user = userRepository.findByEmail(userDto.getEmail());
+            Integer otpValue = user.getOtp();
 
-        Optional<User> optionalUser = userRepository.findByEmail(userDto.getEmail());
-
-            if (!optionalUser.isPresent()) {
-                return new Response("400", "User not Found");
-            }
-
-        User user = optionalUser.get();
-
-            if (user.getPassword().equalsIgnoreCase(userDto.getPassword())){
-                return new Response("200","login Successfull");
-            }else {
-                return new Response("401","Invalid Password");
+            if (otpValue.equals(userDto.getOtp())){
+                response.setCode("200");
+                response.setMessage("OTP is verified");
+                return response;
             }
 
-    }
-
-
-    @Override
-    public Response verifyEmail(String email) {
-//        User user = null;
-
-        Optional<User> optionalUser = userRepository.findByEmail(email);
-
-        if (!optionalUser.isPresent()){
-            return new Response("400", "User not Found");
-        }
-
-        User user = optionalUser.get();
-        if (user.getEmail().equals(email)) {
-            return new Response("200", "User is Verified");
-        }
-        else {
-            return new Response("401", "Email does not match");
-        }
-    }
-
-    @Override
-    public Response sendOtp(String email) {
-//        User user = null;
-
-        Random random = new Random();
-        int otp = 100000 + random.nextInt(900000);
-
-        String subject = "Your OTP for email verification";
-        String text = "Your OTP is: " +  otp;
-
-        sendEmail(subject,text,email);
-
-        Optional<User> optionalUser  = userRepository.findByEmail(email);
-
-        if (optionalUser != null){
-           User user = optionalUser.get();
-           user.setOtp(otp);
-            userRepository.save(user);
-            return new Response("200", "OTP sent successfully");
-        }
-        else {
-            return new Response("400", "User not found");
-        }
-
-    }
-
-    @Override
-    public Response verifyOtp(String email, int otp) {
-//        User user = null;
-
-        Optional<User> optionalUser= userRepository.findByEmail(email);
-
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            int otpValue = user.getOtp();
-
-            if (otp == otpValue) {
-                return new Response("200", "OTP is Verified");
-            } else {
-                return new Response("400", "OTP does not match");
+            else {
+                response.setCode("400");
+                response.setMessage("OTP does not match");
+                return response;
             }
         }
-          return new Response("404", "User not found");
+
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return response;
     }
 
     @Override
     public Response updatePassword(UserDto userDto) {
-        User user = null;
-
+        Response response = new Response();
         try {
-            Optional<User> users = userRepository.findByEmail(userDto.getEmail());
+            User user = userRepository.findByEmail(userDto.getEmail());
+            if (user == null){
+                response.setResponse(EcommResponse.USER_NOT_FOUND);
+                return response;
+            }
 
            user.setPassword(userDto.getPassword());
 
-           userRepository.save(user);
+            User save = userRepository.save(user);
 
-           return new Response("200", "Password updated Successfully");
+            response.setResponse(EcommResponse.SUCCESS);
+            response.setData("data", save);
+            return response;
         }
         catch (Exception e){
-            return new Response("400","Failed to update Password");
+            e.printStackTrace();
         }
-
+        return response;
     }
 
     @Override
-    public String deleteUser(UserDto userDto) {
+    public Response deleteUser(UserDto userDto) {
 
-        Optional<User> optionalUser = userRepository.findByEmail(userDto.getEmail());
-        if (optionalUser.isPresent()){
+        Response response = new Response();
 
-            User user = optionalUser.get();
-            userRepository.delete(user);
+        try {
 
-            return ("User Deleted Successfully " + user.getEmail());
+            User user = userRepository.findByEmail(userDto.getEmail());
+            if (user == null){
+                response.setResponse(EcommResponse.USER_NOT_FOUND);
+                return response;
+            }
+
+            user.setIsActive(false);
+            response.setCode("200");
+            response.setMessage("User Deleted Successfully");
+            return response;
         }
-        else {
-            return ("User not Found");
+        catch (Exception e){
+            e.printStackTrace();
         }
-
+        return response;
     }
 
 

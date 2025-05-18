@@ -21,9 +21,11 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public Response createUser(@RequestBody UserDto userDto){
+    public ResponseEntity<?> createUser(@RequestBody UserDto userDto){
 
-            return userService.registerUser(userDto);
+        Response response = userService.registerUser(userDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+
 
     }
 
@@ -39,38 +41,35 @@ public class UserController {
     }
 
     @PostMapping("/verifyEmail")
-    public Response verifyEmail(@RequestBody UserDto userDto) throws Exception {
-        String email = userDto.getEmail();
-        return userService.verifyEmail(email);
+    public ResponseEntity<?> verifyEmail(@RequestBody UserDto userDto){
+        Response response = userService.sendOtp(userDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/sendOTP")
-    public Response sendOtp(@RequestBody UserDto userDto){
-        String email = userDto.getEmail();
-        return userService.sendOtp(email);
+    public ResponseEntity<?> sendOtp(@RequestBody UserDto userDto){
+
+        Response response = userService.sendOtp(userDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/verifyOTP")
-    public Response verifyOtp(@RequestBody UserDto userDto){
-        int otp = userDto.getOtp();
-        String email = userDto.getEmail();
-        return userService.verifyOtp(email, otp);
+    public ResponseEntity<?> verifyOtp(@RequestBody UserDto userDto){
+        Response response = userService.verifyOtp(userDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/updatePassword")
-    public Response updatePassword(@RequestBody UserDto userDto){
-        return userService.updatePassword(userDto);
+    public ResponseEntity<?> updatePassword(@RequestBody UserDto userDto){
+
+        Response response = userService.updatePassword(userDto);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/deleteUser")
-    public ResponseEntity<String> deleteUser(@RequestBody UserDto userDto){
-        try {
-            String result = userService.deleteUser(userDto);
-            return ResponseEntity.ok(result);
-        }
-        catch (Exception e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
+    public ResponseEntity<?> deleteUser(@RequestBody UserDto userDto){
+            Response result = userService.deleteUser(userDto);
+            return new ResponseEntity<>(result, HttpStatus.OK);
     }
 }
 

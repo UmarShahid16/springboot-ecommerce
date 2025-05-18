@@ -12,13 +12,13 @@ public interface UserService {
     Response loginUser(UserDto userDto) throws  Exception;
 
 
-    Response verifyEmail(String email);
+    Response verifyEmail(UserDto userDto);
 
-    Response sendOtp(String email);
+    Response sendOtp(UserDto userDto);
 
-    Response verifyOtp(String email, int otp);
+    Response verifyOtp(UserDto userDto);
 
     Response updatePassword(UserDto userDto);
 
-    String deleteUser(UserDto userDto) throws  Exception;
+    Response deleteUser(UserDto userDto);
 }
