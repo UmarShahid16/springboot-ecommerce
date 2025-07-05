@@ -11,4 +11,5 @@ public class UserDto {
     private String phoneNumber;
     private Integer otp;
     private Boolean isActive;
+    private String oldPassword;
 }

@@ -41,7 +41,7 @@ public class UserServiceImpl implements UserService{
            User existingUser = userRepository.findByEmail(userDto.getEmail());
            if (existingUser != null){
                response.setCode("404");
-               response.setMessage("user already exist with this email");
+               response.setMessage("User Already Exist With This Email");
                return response;
            }
 
@@ -58,7 +58,7 @@ public class UserServiceImpl implements UserService{
            }
 
            User save = userRepository.save(toEntity(userDto));
-           response.setResponse(EcommResponse.SUCCESS);
+           response.setResponse(EcommResponse.USER_REGISTERED_SUCCESSFULLY);
            response.setData("data", save);
            return response;
        }
@@ -80,12 +80,12 @@ public class UserServiceImpl implements UserService{
 
             User user = userRepository.findByEmailAndPassword(userDto.getEmail(), userDto.getPassword());
             if (user == null){
-                response.setResponse(EcommResponse.DATA_NOT_FOUND);
+                response.setResponse(EcommResponse.INVALID_CREDENTIALS);
                 return response;
             }
 
             else {
-                response.setResponse(EcommResponse.INVALID_CREDENTIALS);
+                response.setResponse(EcommResponse.LOGIN_SUCCESSFUL);
                 return response;
             }
         }
@@ -153,7 +153,7 @@ public class UserServiceImpl implements UserService{
             user.setOtp(otp);
             user = userRepository.save(user);
 
-            response.setResponse(EcommResponse.SUCCESS);
+            response.setResponse(EcommResponse.OTP_SEND_SUCCESSFULLY);
             response.setData("data", user);
             return response;
 
@@ -204,12 +204,18 @@ public class UserServiceImpl implements UserService{
                 response.setResponse(EcommResponse.USER_NOT_FOUND);
                 return response;
             }
-
-           user.setPassword(userDto.getPassword());
+            if (userDto.getOldPassword().equals(user.getPassword())){
+                user.setPassword(userDto.getPassword());
+            }
+            else {
+                response.setCode("404");
+                response.setMessage("Old Password Does Not Match");
+                return response;
+            }
 
             User save = userRepository.save(user);
 
-            response.setResponse(EcommResponse.SUCCESS);
+            response.setResponse(EcommResponse.PASSWORD_UPDATED_SUCCESSFULLY);
             response.setData("data", save);
             return response;
         }
